@@ -1,0 +1,109 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register</title>
+  <link rel="stylesheet" href="{% static 'css/main.css' %}" />
+</head>
+<body>
+
+{% if messages %}
+<div class="messages-container">
+  {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% else %}info{% endif %}">
+      <span>{{ message }}</span>
+      <button class="alert-close">×</button>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="auth-page">
+  <!-- Left panel -->
+  <div class="auth-left">
+    <div class="auth-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">⚡</div>
+        <span class="logo-text" style="font-family: var(--font-display); font-size:20px; font-weight:800;">Task<span style="color:var(--amber)">Manager</span></span>
+      </div>
+    </div>
+
+    <div class="auth-hero">
+      <div class="auth-hero-tag">Join TaskManager</div>
+      <h1>Start tracking<br /><span>smarter today.</span></h1>
+      <p>Create your free account and gain full control over your tasks, deadlines, and progress — from day one.</p>
+    </div>
+
+    <div class="auth-features">
+      <div class="auth-feature">
+        <div class="auth-feature-icon">✅</div>
+        <span>Create, assign & organize tasks with ease</span>
+      </div>
+      <div class="auth-feature">
+        <div class="auth-feature-icon">📈</div>
+        <span>Visual progress bars that update automatically</span>
+      </div>
+      <div class="auth-feature">
+        <div class="auth-feature-icon">🎯</div>
+        <span>Priority levels: Low, Medium, High, Critical</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="auth-right">
+    <div class="auth-form-box">
+      <div class="auth-form-title">Create account</div>
+      <div class="auth-form-subtitle">Get started with your TaskManager workspace</div>
+
+      <form method="POST">
+        {% csrf_token %}
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            {{ form.first_name }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            {{ form.last_name }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          {{ form.username }}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          {{ form.email }}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          {{ form.password1 }}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          {{ form.password2 }}
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full" style="justify-content:center; padding:12px;">
+          Create Account
+        </button>
+      </form>
+
+      <div class="auth-footer-link">
+        Already have an account? <a href="{% url 'login' %}">Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>

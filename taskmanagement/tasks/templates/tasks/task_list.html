@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}My Tasks — TaskFlow{% endblock %}
+{% block page_title %}My Tasks{% endblock %}
+{% block page_subtitle %}{{ total_tasks }} task{{ total_tasks|pluralize }} total{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'task_create' %}" class="btn btn-primary">
+    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    New Task
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <div class="search-input-wrap">
+    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+    </svg>
+    <form method="GET" id="searchForm">
+      <input type="text" name="q" value="{{ search_query }}" class="form-input" placeholder="Search tasks..." oninput="this.form.submit()" />
+      {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}" />{% endif %}
+      {% if priority_filter %}<input type="hidden" name="priority" value="{{ priority_filter }}" />{% endif %}
+      {% if category_filter %}<input type="hidden" name="category" value="{{ category_filter }}" />{% endif %}
+    </form>
+  </div>
+
+  <div class="filter-chips">
+    <!-- Status filters -->
+    <a href="?{% if search_query %}q={{ search_query }}&{% endif %}{% if priority_filter %}priority={{ priority_filter }}&{% endif %}" class="filter-chip {% if not status_filter %}active{% endif %}">All</a>
+    <a href="?status=todo{% if search_query %}&q={{ search_query }}{% endif %}" class="filter-chip {% if status_filter == 'todo' %}active{% endif %}">To Do</a>
+    <a href="?status=in_progress{% if search_query %}&q={{ search_query }}{% endif %}" class="filter-chip {% if status_filter == 'in_progress' %}active{% endif %}">In Progress</a>
+    <a href="?status=review{% if search_query %}&q={{ search_query }}{% endif %}" class="filter-chip {% if status_filter == 'review' %}active{% endif %}">Review</a>
+    <a href="?status=completed{% if search_query %}&q={{ search_query }}{% endif %}" class="filter-chip {% if status_filter == 'completed' %}active{% endif %}">Completed</a>
+  </div>
+
+  <div class="filter-chips">
+    <!-- Priority filters -->
+    <a href="?priority=critical{% if status_filter %}&status={{ status_filter }}{% endif %}" class="filter-chip {% if priority_filter == 'critical' %}active{% endif %}" style="color:var(--red)">🔴 Critical</a>
+    <a href="?priority=high{% if status_filter %}&status={{ status_filter }}{% endif %}" class="filter-chip {% if priority_filter == 'high' %}active{% endif %}" style="color:var(--orange)">🟠 High</a>
+    <a href="?priority=medium{% if status_filter %}&status={{ status_filter }}{% endif %}" class="filter-chip {% if priority_filter == 'medium' %}active{% endif %}">🔵 Medium</a>
+    <a href="?priority=low{% if status_filter %}&status={{ status_filter }}{% endif %}" class="filter-chip {% if priority_filter == 'low' %}active{% endif %}">⚪ Low</a>
+  </div>
+</div>
+
+<!-- Task List -->
+{% if tasks %}
+  <div class="task-list">
+    {% for task in tasks %}
+    <div class="task-card priority-{{ task.priority }} status-{{ task.status }}" onclick="window.location='{% url 'task_detail' task.pk %}'">
+      <div class="task-card-top">
+        <div style="flex:1">
+          <div class="task-title">{{ task.title }}</div>
+          {% if task.description %}
+            <div class="task-desc" style="margin-top:4px">{{ task.description }}</div>
+          {% endif %}
+        </div>
+
+        <!-- Quick actions -->
+        <div class="task-actions" onclick="event.stopPropagation()">
+          <a href="{% url 'task_update' task.pk %}" class="btn btn-ghost btn-icon btn-sm" title="Edit">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+          </a>
+          <button class="btn btn-ghost btn-icon btn-sm" title="Delete" onclick="confirmDelete({{ task.pk }}, '{{ task.title|escapejs }}')">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Meta row -->
+      <div class="task-meta">
+        <span class="badge badge-{{ task.status }}">
+          {% if task.status == 'todo' %}● To Do
+          {% elif task.status == 'in_progress' %}▶ In Progress
+          {% elif task.status == 'review' %}◎ Review
+          {% elif task.status == 'completed' %}✓ Done
+          {% endif %}
+        </span>
+
+        <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+
+        {% if task.category %}
+          <span class="badge" style="background: {{ task.category.color }}22; color: {{ task.category.color }}; border-color: {{ task.category.color }}44;">
+            {{ task.category.name }}
+          </span>
+        {% endif %}
+
+        {% if task.due_date %}
+          <span class="task-due {% if task.is_overdue %}overdue{% elif task.days_until_due is not None and task.days_until_due <= 3 %}due-soon{% endif %}">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            {% if task.is_overdue %}
+              Overdue · {{ task.due_date|date:"M d" }}
+            {% else %}
+              {{ task.time_remaining }}
+            {% endif %}
+          </span>
+        {% endif %}
+      </div>
+
+      <!-- Progress bar -->
+      <div class="task-progress-section" onclick="event.stopPropagation()">
+        <div class="progress-track" style="flex:1">
+          <div class="progress-fill {% if task.status == 'completed' %}green{% elif task.is_overdue %}red{% endif %}"
+               style="width: {{ task.progress }}%"></div>
+        </div>
+        <span class="task-progress-label">{{ task.progress }}%</span>
+      </div>
+
+      <!-- Quick status update -->
+      <div style="display:flex; gap:6px; flex-wrap:wrap;" onclick="event.stopPropagation()">
+        {% csrf_token %}
+        {% if task.status != 'todo' %}
+          <button class="btn btn-ghost btn-sm quick-status-btn" data-task-id="{{ task.pk }}" data-status="todo">↩ To Do</button>
+        {% endif %}
+        {% if task.status != 'in_progress' %}
+          <button class="btn btn-ghost btn-sm quick-status-btn" data-task-id="{{ task.pk }}" data-status="in_progress">▶ Start</button>
+        {% endif %}
+        {% if task.status != 'review' %}
+          <button class="btn btn-ghost btn-sm quick-status-btn" data-task-id="{{ task.pk }}" data-status="review">◎ Review</button>
+        {% endif %}
+        {% if task.status != 'completed' %}
+          <button class="btn btn-ghost btn-sm quick-status-btn" data-task-id="{{ task.pk }}" data-status="completed" style="color:var(--green)">✓ Complete</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+{% else %}
+  <div class="card">
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">No tasks found</div>
+      <div class="empty-subtitle">
+        {% if search_query or status_filter or priority_filter %}
+          Try adjusting your filters or search terms.
+        {% else %}
+          Create your first task to get started!
+        {% endif %}
+      </div>
+      {% if not search_query and not status_filter and not priority_filter %}
+        <a href="{% url 'task_create' %}" class="btn btn-primary">
+          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Create First Task
+        </a>
+      {% else %}
+        <a href="{% url 'task_list' %}" class="btn btn-secondary">Clear Filters</a>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}

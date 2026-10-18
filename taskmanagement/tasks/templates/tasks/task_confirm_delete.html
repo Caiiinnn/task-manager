@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Task — TaskFlow{% endblock %}
+{% block page_title %}Delete Task{% endblock %}
+
+{% block content %}
+<div style="max-width: 480px; margin: 60px auto;">
+  <div class="card">
+    <div class="card-body" style="text-align:center; padding: 40px;">
+      <div style="font-size:48px; margin-bottom:16px;">🗑️</div>
+      <div style="font-family:var(--font-display); font-size:22px; font-weight:700; margin-bottom:8px;">Delete Task?</div>
+      <div style="color:var(--text-secondary); margin-bottom:8px;">You're about to permanently delete:</div>
+      <div style="font-size:18px; font-weight:600; color:var(--amber); margin-bottom:20px;">"{{ task.title }}"</div>
+      <div style="color:var(--text-muted); font-size:13px; margin-bottom:28px;">This action cannot be undone. All task data and checklist items will be removed.</div>
+
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <a href="{% url 'task_list' %}" class="btn btn-secondary">Cancel</a>
+        <form method="POST" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Yes, Delete It</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

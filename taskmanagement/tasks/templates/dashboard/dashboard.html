@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard — TaskManager{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Welcome back, {{ request.user.first_name|default:request.user.username }}! Here's your overview.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'task_create' %}" class="btn btn-primary">
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    New Task
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Stat cards ── -->
+<div class="stats-grid">
+  <div class="stat-card" style="--accent-color: var(--amber); --icon-bg: var(--amber-dim);">
+    <div class="stat-icon">📋</div>
+    <div class="stat-label">Total Tasks</div>
+    <div class="stat-value" data-target="{{ total }}">{{ total }}</div>
+    <div class="stat-change">All time</div>
+  </div>
+
+  <div class="stat-card" style="--accent-color: var(--green); --icon-bg: var(--green-dim);">
+    <div class="stat-icon">✅</div>
+    <div class="stat-label">Completed</div>
+    <div class="stat-value" data-target="{{ completed }}">{{ completed }}</div>
+    <div class="stat-change">{{ completion_rate }}% completion rate</div>
+  </div>
+
+  <div class="stat-card" style="--accent-color: var(--blue); --icon-bg: var(--blue-dim);">
+    <div class="stat-icon">▶️</div>
+    <div class="stat-label">In Progress</div>
+    <div class="stat-value" data-target="{{ in_progress }}">{{ in_progress }}</div>
+    <div class="stat-change">Active right now</div>
+  </div>
+
+  <div class="stat-card" style="--accent-color: var(--red); --icon-bg: var(--red-dim);">
+    <div class="stat-icon">⚠️</div>
+    <div class="stat-label">Overdue</div>
+    <div class="stat-value" data-target="{{ overdue }}">{{ overdue }}</div>
+    <div class="stat-change">{% if overdue > 0 %}Needs attention{% else %}All on track!{% endif %}</div>
+  </div>
+</div>
+
+<!-- ── Main grid ── -->
+<div class="dashboard-grid">
+
+  <!-- Overall Progress (full width) -->
+  <div class="card col-full">
+    <div class="card-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+        <div>
+          <div style="font-family:var(--font-display); font-size:17px; font-weight:700; margin-bottom:4px;">Overall Completion Rate</div>
+          <div style="font-size:13px; color:var(--text-secondary);">Across all {{ total }} tasks in your workspace</div>
+        </div>
+        <div style="font-family:var(--font-display); font-size:48px; font-weight:800; color:var(--amber); line-height:1;">{{ completion_rate }}%</div>
+      </div>
+
+      <div class="progress-track" style="height:14px; margin-bottom:16px;">
+        <div class="progress-fill" style="width:{{ completion_rate }}%"></div>
+      </div>
+
+      <!-- Status breakdown -->
+      <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:12px;">
+        <div style="text-align:center; background:var(--bg-elevated); border-radius:var(--radius-md); padding:12px;">
+          <div style="font-family:var(--font-display); font-size:22px; font-weight:800; color:var(--text-muted);">{{ todo }}</div>
+          <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">To Do</div>
+        </div>
+        <div style="text-align:center; background:var(--blue-dim); border-radius:var(--radius-md); padding:12px; border:1px solid rgba(59,130,246,0.15);">
+          <div style="font-family:var(--font-display); font-size:22px; font-weight:800; color:var(--blue);">{{ in_progress }}</div>
+          <div style="font-size:11px; color:var(--blue); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; opacity:0.8;">In Progress</div>
+        </div>
+        <div style="text-align:center; background:var(--purple-dim); border-radius:var(--radius-md); padding:12px; border:1px solid rgba(168,85,247,0.15);">
+          <div style="font-family:var(--font-display); font-size:22px; font-weight:800; color:var(--purple);">{{ review }}</div>
+          <div style="font-size:11px; color:var(--purple); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; opacity:0.8;">In Review</div>
+        </div>
+        <div style="text-align:center; background:var(--green-dim); border-radius:var(--radius-md); padding:12px; border:1px solid rgba(34,197,94,0.15);">
+          <div style="font-family:var(--font-display); font-size:22px; font-weight:800; color:var(--green);">{{ completed }}</div>
+          <div style="font-size:11px; color:var(--green); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; opacity:0.8;">Completed</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Tasks -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Recent Tasks</div>
+      <a href="{% url 'task_list' %}" style="font-size:13px; color:var(--amber);">View all →</a>
+    </div>
+    {% if recent_tasks %}
+      <div style="padding:8px 0;">
+        {% for task in recent_tasks %}
+        <a href="{% url 'task_detail' task.pk %}" style="display:block; padding:14px 24px; border-bottom:1px solid var(--border); transition:var(--transition);" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;">
+            <div style="font-size:14px; font-weight:500; color:var(--text-primary); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              {{ task.title }}
+            </div>
+            <span class="badge badge-{{ task.priority }}" style="flex-shrink:0;">{{ task.get_priority_display }}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="progress-track" style="flex:1;">
+              <div class="progress-fill {% if task.status == 'completed' %}green{% elif task.is_overdue %}red{% endif %}"
+                   style="width:{{ task.progress }}%"></div>
+            </div>
+            <span style="font-size:12px; color:var(--text-muted); min-width:32px; text-align:right;">{{ task.progress }}%</span>
+            <span class="badge badge-{{ task.status }}" style="flex-shrink:0; font-size:10px;">
+              {% if task.status == 'todo' %}To Do{% elif task.status == 'in_progress' %}Active{% elif task.status == 'review' %}Review{% else %}Done{% endif %}
+            </span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding:30px;">
+        <div class="empty-icon">📝</div>
+        <div class="empty-title">No tasks yet</div>
+        <div class="empty-subtitle">Create your first task to get started.</div>
+        <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm">+ New Task</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Upcoming Deadlines -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Upcoming Deadlines</div>
+      <a href="{% url 'progress_tracking' %}" style="font-size:13px; color:var(--amber);">Track all →</a>
+    </div>
+    {% if upcoming %}
+      <div style="padding:8px 0;">
+        {% for task in upcoming %}
+        <a href="{% url 'task_detail' task.pk %}" style="display:flex; align-items:center; gap:14px; padding:14px 24px; border-bottom:1px solid var(--border); transition:var(--transition);" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
+          <!-- Deadline indicator -->
+          <div style="text-align:center; min-width:44px;">
+            <div style="font-family:var(--font-display); font-size:20px; font-weight:800; color:{% if task.days_until_due <= 1 %}var(--red){% elif task.days_until_due <= 3 %}var(--orange){% else %}var(--amber){% endif %}; line-height:1;">
+              {% if task.days_until_due == 0 %}Today{% elif task.days_until_due == 1 %}1d{% else %}{{ task.days_until_due }}d{% endif %}
+            </div>
+            <div style="font-size:10px; color:var(--text-muted);">left</div>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:13px; font-weight:500; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px;">{{ task.title }}</div>
+            <div style="font-size:11px; color:var(--text-muted);">{{ task.due_date|date:"M d, H:i" }} · {{ task.get_priority_display }}</div>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <span style="font-size:12px; font-weight:700; color:var(--amber);">{{ task.progress }}%</span>
+            <div class="progress-track" style="width:48px; height:4px;">
+              <div class="progress-fill" style="width:{{ task.progress }}%"></div>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding:30px;">
+        <div class="empty-icon">📅</div>
+        <div class="empty-title">No upcoming deadlines</div>
+        <div class="empty-subtitle">Set due dates on tasks to see them here.</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Priority Breakdown -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Priority Breakdown</div>
+    </div>
+    <div class="card-body" style="display:flex; flex-direction:column; gap:14px;">
+      {% with total_for_priority=priority_data.critical|add:priority_data.high|add:priority_data.medium|add:priority_data.low %}
+
+      <!-- Critical -->
+      <div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="font-size:13px; color:var(--red); font-weight:500;">🔴 Critical</span>
+          <span style="font-size:13px; font-weight:700; color:var(--text-primary);">{{ priority_data.critical }}</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill red" style="width:{% if total > 0 %}{% widthratio priority_data.critical total 100 %}{% else %}0{% endif %}%"></div>
+        </div>
+      </div>
+
+      <!-- High -->
+      <div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="font-size:13px; color:var(--orange); font-weight:500;">🟠 High</span>
+          <span style="font-size:13px; font-weight:700; color:var(--text-primary);">{{ priority_data.high }}</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:{% if total > 0 %}{% widthratio priority_data.high total 100 %}{% else %}0{% endif %}%; background:var(--orange);"></div>
+        </div>
+      </div>
+
+      <!-- Medium -->
+      <div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="font-size:13px; color:var(--blue); font-weight:500;">🔵 Medium</span>
+          <span style="font-size:13px; font-weight:700; color:var(--text-primary);">{{ priority_data.medium }}</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill blue" style="width:{% if total > 0 %}{% widthratio priority_data.medium total 100 %}{% else %}0{% endif %}%"></div>
+        </div>
+      </div>
+
+      <!-- Low -->
+      <div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="font-size:13px; color:var(--text-muted); font-weight:500;">⚪ Low</span>
+          <span style="font-size:13px; font-weight:700; color:var(--text-primary);">{{ priority_data.low }}</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:{% if total > 0 %}{% widthratio priority_data.low total 100 %}{% else %}0{% endif %}%; background:var(--text-muted);"></div>
+        </div>
+      </div>
+
+      {% endwith %}
+    </div>
+  </div>
+
+  <!-- Categories -->
+  {% if categories %}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Categories</div>
+      <span style="font-size:12px; color:var(--text-muted);">{{ categories.count }} total</span>
+    </div>
+    <div class="card-body" style="display:flex; flex-direction:column; gap:10px;">
+      {% for cat in categories %}
+      <div style="display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--bg-elevated); border-radius:var(--radius-md);">
+        <div style="width:10px; height:10px; border-radius:50%; background:{{ cat.color }}; flex-shrink:0;"></div>
+        <span style="font-size:13px; color:var(--text-primary); flex:1;">{{ cat.name }}</span>
+        <span style="font-size:12px; color:var(--text-muted);">{{ cat.task_count }} task{{ cat.task_count|pluralize }}</span>
+        <div class="progress-track" style="width:60px; height:4px;">
+          <div class="progress-fill" style="width:{% if total > 0 %}{% widthratio cat.task_count total 100 %}{% else %}0{% endif %}%; background:{{ cat.color }};"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Active Progress Snapshot (full width) -->
+  {% if avg_progress %}
+  <div class="card col-full" style="background: linear-gradient(135deg, var(--bg-card) 0%, #1a1710 100%); border-color: var(--border-amber);">
+    <div class="card-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+        <div>
+          <div style="font-family:var(--font-display); font-size:17px; font-weight:700; color:var(--amber); margin-bottom:4px;">
+            ⚡ Active Tasks Average Progress
+          </div>
+          <div style="font-size:13px; color:var(--text-secondary);">
+            Average progress of {{ in_progress }} in-progress and {{ review }} under-review tasks
+          </div>
+        </div>
+        <div style="font-family:var(--font-display); font-size:52px; font-weight:800; color:var(--amber); line-height:1;">
+          {{ avg_progress }}%
+        </div>
+      </div>
+      <div class="progress-track" style="height:10px; margin-top:20px;">
+        <div class="progress-fill" style="width:{{ avg_progress }}%"></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

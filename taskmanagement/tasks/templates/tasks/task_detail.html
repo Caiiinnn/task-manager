@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ task.title }} — TaskFlow{% endblock %}
+{% block page_title %}Task Detail{% endblock %}
+{% block page_subtitle %}{{ task.created_at|date:"M d, Y" }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'task_update' task.pk %}" class="btn btn-secondary">
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+    </svg>
+    Edit
+  </a>
+  <button class="btn btn-danger btn-sm" onclick="confirmDelete({{ task.pk }}, '{{ task.title|escapejs }}')">
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+    </svg>
+    Delete
+  </button>
+  <a href="{% url 'task_list' %}" class="btn btn-ghost">← Back</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid; grid-template-columns: 1fr 340px; gap:20px; align-items:start;">
+
+  <!-- Left: Main info -->
+  <div style="display:flex; flex-direction:column; gap:20px;">
+
+    <!-- Task header card -->
+    <div class="card">
+      <div class="card-body">
+        {% if task.is_overdue %}
+          <div class="overdue-strip">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            This task is overdue! Due {{ task.due_date|date:"M d, Y H:i" }}
+          </div>
+        {% endif %}
+
+        <h1 style="font-family:var(--font-display); font-size:26px; font-weight:800; margin-bottom:12px; line-height:1.3;">
+          {{ task.title }}
+        </h1>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px;">
+          <span class="badge badge-{{ task.status }}">
+            {% if task.status == 'todo' %}● To Do
+            {% elif task.status == 'in_progress' %}▶ In Progress
+            {% elif task.status == 'review' %}◎ Under Review
+            {% elif task.status == 'completed' %}✓ Completed
+            {% endif %}
+          </span>
+          <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }} Priority</span>
+          {% if task.category %}
+            <span class="badge" style="background:{{ task.category.color }}22; color:{{ task.category.color }}; border-color:{{ task.category.color }}44;">
+              {{ task.category.name }}
+            </span>
+          {% endif %}
+          {% if task.is_overdue %}<span class="badge badge-overdue">⚠ Overdue</span>{% endif %}
+        </div>
+
+        <!-- Progress section -->
+        <div style="background:var(--bg-elevated); border-radius:var(--radius-md); padding:20px; margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px;">
+            <div>
+              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">Task Progress</div>
+              <div style="font-size:13px; color:var(--text-secondary);">
+                {% if task.status == 'completed' %}Completed on {{ task.completed_at|date:"M d, Y" }}
+                {% elif task.status == 'todo' %}Not started yet
+                {% elif task.status == 'review' %}Under review — almost done
+                {% elif task.due_date %}{{ task.time_remaining }}
+                {% else %}In progress
+                {% endif %}
+              </div>
+            </div>
+            <div style="font-family:var(--font-display); font-size:42px; font-weight:800; color:{% if task.status == 'completed' %}var(--green){% elif task.is_overdue %}var(--red){% else %}var(--amber){% endif %}; line-height:1;">
+              {{ task.progress }}%
+            </div>
+          </div>
+          <div class="progress-track" style="height:10px;">
+            <div class="progress-fill {% if task.status == 'completed' %}green{% elif task.is_overdue %}red{% endif %}"
+                 style="width:{{ task.progress }}%"></div>
+          </div>
+        </div>
+
+        {% if task.description %}
+          <div>
+            <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Description</div>
+            <div style="font-size:15px; color:var(--text-secondary); line-height:1.7; white-space:pre-line;">{{ task.description }}</div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Checklist card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Checklist</div>
+        {% if total_items > 0 %}
+          <span style="font-size:13px; color:var(--text-muted);">{{ completed_items }}/{{ total_items }} done
+            {% if checklist_progress == 100 %} ✓{% endif %}
+          </span>
+        {% endif %}
+      </div>
+
+      {% if total_items > 0 %}
+        <div style="padding:4px 0;">
+          <div class="progress-track" style="margin:0 24px 4px; border-radius:0;">
+            <div class="progress-fill green" style="width:{{ checklist_progress }}%"></div>
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="card-body" style="padding-top:8px;">
+        <!-- Existing items -->
+        {% for item in checklist_items %}
+        <div class="checklist-item">
+          <form method="POST" style="display:contents;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="toggle_checklist" />
+            <input type="hidden" name="item_id" value="{{ item.id }}" />
+            <button type="submit" class="check-btn {% if item.is_done %}done{% endif %}">
+              {% if item.is_done %}
+                <svg width="11" height="11" fill="none" stroke="white" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+              {% endif %}
+            </button>
+          </form>
+          <span class="checklist-text {% if item.is_done %}done{% endif %}">{{ item.text }}</span>
+          <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_checklist" />
+            <input type="hidden" name="item_id" value="{{ item.id }}" />
+            <button type="submit" class="btn btn-ghost btn-icon btn-sm" style="opacity:0.4;" title="Remove">×</button>
+          </form>
+        </div>
+        {% empty %}
+          <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">
+            No checklist items yet. Add sub-tasks below.
+          </div>
+        {% endfor %}
+
+        <!-- Add new item -->
+        <form method="POST" style="margin-top:12px; display:flex; gap:8px;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add_checklist" />
+          <input type="text" name="text" class="form-input" placeholder="Add checklist item..." style="flex:1;" />
+          <button type="submit" class="btn btn-secondary btn-sm">Add</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right: Sidebar info -->
+  <div style="display:flex; flex-direction:column; gap:16px;">
+
+    <!-- Details card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title" style="font-size:14px;">Task Details</div>
+      </div>
+      <div class="card-body" style="display:flex; flex-direction:column; gap:14px;">
+
+        <div>
+          <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Created</div>
+          <div style="font-size:13px; color:var(--text-secondary);">{{ task.created_at|date:"M d, Y H:i" }}</div>
+        </div>
+
+        <div>
+          <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Last Updated</div>
+          <div style="font-size:13px; color:var(--text-secondary);">{{ task.updated_at|date:"M d, Y H:i" }}</div>
+        </div>
+
+        {% if task.due_date %}
+        <div>
+          <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Due Date</div>
+          <div style="font-size:13px; color:{% if task.is_overdue %}var(--red){% elif task.days_until_due <= 3 %}var(--orange){% else %}var(--text-secondary){% endif %}; font-weight:500;">
+            {{ task.due_date|date:"M d, Y H:i" }}
+            <div style="font-size:12px; font-weight:400; margin-top:2px;">{{ task.time_remaining }}</div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if task.completed_at %}
+        <div>
+          <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Completed</div>
+          <div style="font-size:13px; color:var(--green);">{{ task.completed_at|date:"M d, Y H:i" }}</div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <!-- Quick status change -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title" style="font-size:14px;">Quick Status</div>
+      </div>
+      <div class="card-body" style="display:flex; flex-direction:column; gap:8px;">
+        {% csrf_token %}
+        {% for val, label in task.STATUS_CHOICES %}
+        <button class="btn {% if task.status == val %}btn-primary{% else %}btn-secondary{% endif %} quick-status-btn"
+                data-task-id="{{ task.pk }}" data-status="{{ val }}"
+                style="justify-content:flex-start; {% if task.status == val %}cursor:default;{% endif %}">
+          {% if val == 'todo' %}●{% elif val == 'in_progress' %}▶{% elif val == 'review' %}◎{% else %}✓{% endif %}
+          {{ label }}
+          {% if task.status == val %}<span style="margin-left:auto; font-size:11px; opacity:0.7;">Current</span>{% endif %}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

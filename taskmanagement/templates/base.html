@@ -1,0 +1,151 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}TaskManager{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/main.css' %}" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23f5a623'/><text x='8' y='22' font-size='18'>⚡</text></svg>" />
+</head>
+<body>
+
+{% if messages %}
+<div class="messages-container">
+  {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% else %}info{% endif %}">
+      <span>{{ message }}</span>
+      <button class="alert-close">×</button>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="app-wrapper">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">⚡</div>
+        <span class="logo-text">Task<span>Manager</span></span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Main</span>
+
+      <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM14 5a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>
+        </svg>
+        Dashboard
+      </a>
+
+      <a href="{% url 'task_list' %}" class="nav-item {% if request.resolver_match.url_name in 'task_list,task_create,task_update,task_detail' %}active{% endif %}">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+        </svg>
+        My Tasks
+        {% if task_overdue_count %}
+          <span class="nav-badge">{{ task_overdue_count }}</span>
+        {% endif %}
+      </a>
+
+      <a href="{% url 'progress_tracking' %}" class="nav-item {% if request.resolver_match.url_name == 'progress_tracking' %}active{% endif %}">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        Progress
+      </a>
+
+      <span class="nav-section-label">Actions</span>
+
+      <a href="{% url 'task_create' %}" class="nav-item">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/>
+        </svg>
+        New Task
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <div class="avatar" style="background: {{ request.user.avatar_color|default:'#f5a623' }}">
+          {{ request.user.get_initials }}
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+          <div class="user-role">{{ request.user.email }}</div>
+        </div>
+        <a href="{% url 'logout' %}" class="logout-btn" title="Logout">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-content">
+    <header class="topbar">
+      <div>
+        <div class="page-title">{% block page_title %}TaskFlow{% endblock %}</div>
+        <div class="page-subtitle">{% block page_subtitle %}{% endblock %}</div>
+      </div>
+      <div class="topbar-actions">
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </header>
+
+    <main class="page-body">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="deleteModal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title" id="deleteModalTitle">Delete Task?</div>
+    <div class="modal-body">
+      <p style="color: var(--text-secondary);">This action cannot be undone. The task and all its data will be permanently removed.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
+      <form id="deleteForm" method="POST" style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Delete Task</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Category Quick-Add Modal -->
+<div class="modal-overlay" id="categoryModal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">New Category</div>
+    <div class="modal-body">
+      <form id="categoryForm">
+        {% csrf_token %}
+        <div class="form-group">
+          <label class="form-label">Category Name</label>
+          <input type="text" name="name" class="form-input" placeholder="e.g. Design, Backend..." required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color</label>
+          <input type="color" name="color" class="form-input" value="#f5a623" style="height:42px; padding:4px 8px;" />
+        </div>
+      </form>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('categoryModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="document.getElementById('categoryForm').dispatchEvent(new Event('submit'))">Create</button>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/main.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
